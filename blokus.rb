@@ -4,26 +4,22 @@ class Blokus
 
   BLOCKS = {
     l5: {
-          a:[
-              [0,0],
-              [1,0],
-              [0,1],
-              [0,2]
-            ],
-          b:[
-              [0,0],
-              [0,1],
-              [1,1],
-              [2,1]
-            ]
+          "1" => [[0, 1],[0, 2],[1, 0],[1, 1],[2, 0]],
+          "2" => [[0, 0],[1, 0],[1, 1],[2, 1],[2, 2]],
+          "3" => [[0, 2],[1, 1],[1, 2],[2, 0],[2, 1]],
+          "4" => [[0, 0],[0, 1],[1, 1],[1, 2],[2, 2]]
         },
-    y: [
-          [1,0],
-          [0,1],
-          [1,1],
-          [2,1],
-          [3,1]
-        ],
+    y: {
+          "1" => [[0, 1],[1, 0],[1, 1],[2, 1],[3, 1]],
+          "2" => [[0, 0],[0, 1],[0, 2],[0, 3],[1, 1]],
+          "3" => [[0, 0],[1, 0],[2, 0],[2, 1],[3, 0]],
+          "4" => [[0, 2],[1, 0],[1, 1],[1, 2],[1, 3]],
+          "5" => [[0, 0],[0, 1],[0, 2],[0, 3],[1, 2]],
+          "6" => [[0, 0],[1, 0],[1, 1],[2, 0],[3, 0]],
+          "7" => [[0, 1],[1, 0],[1, 1],[1, 2],[1, 3]],
+          "8" => [[0, 1],[1, 1],[2, 0],[2, 1],[3, 1]]
+
+        },
     n: [
           [2,0],
           [3,0],
@@ -140,17 +136,25 @@ class Blokus
           [0,2],
           [0,3],
           [0,4]
-        ],
-  }
+        ]
+  }.freeze
 
   def run_blokus
     initialize_board(19)
-    initialize_blok_base
     print_board(19)
     finished = false
     @turn = 0
-    @player_bloks = BLOCKS
+    @first_turn = true
+    player1_bloks = BLOCKS.dup
+    player2_bloks = BLOCKS.dup
     while !finished
+      if @turn == 0
+        @player_bloks = player1_bloks
+        @symbol = "x"
+      elsif @turn == 1
+        @player_bloks = player2_bloks
+        @symbol = "y"
+      end  
       print_remaining_bloks
       puts "Select board coordinate"
       board_coordinate = gets.chomp.split(",").map(&:to_i)
@@ -164,27 +168,26 @@ class Blokus
       puts "Select blok type"
       choosen_blok_type = gets.chomp
 
+      if !@player_bloks.keys.include?(choosen_blok_type.to_sym)
+        puts "blok not available"
+        next
+      end
+
       printed_bloks = []
-      blok_base = @blok_base
       printed_blok_base = @player_bloks[choosen_blok_type.to_sym].values.each do |blok|
-        blok_1 = blok_base
-        binding.pry
+        blok_1 = initialize_blok_base
         blok.each_with_index do |s|
-          blok_1[s[0]][s[1]] = "x"
-          binding.pry
+          blok_1[s[0]][s[1]] = @symbol
         end
         printed_bloks << blok_1
       end
 
-
-      binding.pry
-
-      print_blok_base()
+      print_blok_base(printed_bloks)
 
       puts "Select blok"
       choosen_blok_direction = gets.chomp
 
-      choosen_blok = @player_bloks[choosen_blok_type.to_sym][choosen_blok_direction.to_sym]
+      choosen_blok = @player_bloks[choosen_blok_type.to_sym][choosen_blok_direction]
 
       if !@player_bloks.include?(choosen_blok_type.to_sym)
         puts "Blok don't exists \n\n"
@@ -193,24 +196,6 @@ class Blokus
 
       @blok_1 = @blok_base
       blok_place = []
-      # printed_blok_base = BLOCKS[choosen_blok.to_sym].each do |b|
-      #   blok_place << @blok_1[b[0]][b[1]
-      #   @blok_1[b[0]][b[1]] = "x"
-      # end
-      # blok_list = [
-      #   @blok_1.transpose,
-      #   @blok_1.reverse,
-      #   @blok_1.transpose.reverse,
-      #   @blok_1.reverse.transpose,
-      #   @blok_1.transpose.reverse.transpose,
-      #   @blok_1.transpose.reverse.transpose.reverse,
-      #   @blok_1.reverse.transpose.reverse,
-      #   @blok_1.reverse.transpose.reverse.transpose
-      # ]
-      # print_blok_base(blok_list)
-
-      # puts "Select number"
-      # blok_number = gets.chomp
 
       puts "Select blok coordinate"
       blok_coordinate = gets.chomp.split(",").map(&:to_i)
@@ -230,28 +215,35 @@ class Blokus
 
   def validate_place(board_coordinate, blok, add)
     valid = true
-    if @turn == 0
-      valid = false if board_coordinate != [0,0]
-    end
+    blok_place = []
+    blok.each do |b|
+      blok_place << [(b[0] + add[0]), (b[1] + add[1])]
+    end 
 
     check_another_blok = true
+    if @first_turn && @turn == 0
+      valid = false if !blok_place.include?([0,0])
+    elsif @first_turn && @turn == 1
+      valid = false if !blok_place.include?([0,19])
+    end
+
     blok.each do |b|
       blok_place = [(b[0] + add[0]), (b[1] + add[1])]
 
       #check if outside board or
       if @board[blok_place[0]] == nil || blok_place[0] < 0 || blok_place[1] < 0
         valid = false
-      elsif @board[blok_place[0]][blok_place[1]] == nil || @board[blok_place[0]][blok_place[1]] == "x"
+      elsif @board[blok_place[0]][blok_place[1]] == nil || @board[blok_place[0]][blok_place[1]] == @symbol
         valid = false
       end
 
       #check if turn > 0
-      if @turn > 0
+      if !@first_turn
         if check_another_blok
-          if @board[blok_place[0] + 1][blok_place[1] + 1] != "x" &&
-            @board[blok_place[0] + 1][blok_place[1] - 1] != "x" &&
-            @board[blok_place[0] - 1][blok_place[1] + 1] != "x" &&
-            @board[blok_place[0] - 1][blok_place[1] - 1] != "x"
+          if @board[blok_place[0] + 1][blok_place[1] + 1] != @symbol &&
+            @board[blok_place[0] + 1][blok_place[1] - 1] != @symbol &&
+            @board[blok_place[0] - 1][blok_place[1] + 1] != @symbol &&
+            @board[blok_place[0] - 1][blok_place[1] - 1] != @symbol
             valid = false
           else
             valid = true
@@ -260,10 +252,10 @@ class Blokus
         end
 
         if valid
-          if @board[blok_place[0] - 1][blok_place[1]] == "x" ||
-              @board[blok_place[0]][blok_place[1] + 1] == "x" ||
-              @board[blok_place[0] + 1][blok_place[1]] == "x" ||
-              @board[blok_place[0]][blok_place[1] - 1] == "x"
+          if @board[blok_place[0] - 1][blok_place[1]] == @symbol ||
+              @board[blok_place[0]][blok_place[1] + 1] == @symbol ||
+              @board[blok_place[0] + 1][blok_place[1]] == @symbol ||
+              @board[blok_place[0]][blok_place[1] - 1] == @symbol
 
               valid = false
           end
@@ -277,14 +269,19 @@ class Blokus
     blok = choosen_blok
     blok_place = []
     add = [(board_coordinate[0] - blok_coordinate[0]), (board_coordinate[1] - blok_coordinate[1])]
-
+    
     if validate_place(board_coordinate, blok, add)
       blok.each_with_index do |b|
         blok_place = [(b[0] + add[0]), (b[1] + add[1])]
-        @board[blok_place[0]][blok_place[1]] = "x"
+        @board[blok_place[0]][blok_place[1]] = @symbol
       end
       @player_bloks.delete(choosen_blok_type.to_sym)
-      @turn += 1
+      if @turn == 1
+        @turn = 0
+        @first_turn = false
+      else
+        @turn += 1
+      end
     else
       puts "Not Valid"
     end
@@ -323,6 +320,7 @@ class Blokus
         @blok_base << blok_base_row
         i += 1
     end
+    @blok_base
   end
 
   def print_board(board_size)
@@ -330,7 +328,7 @@ class Blokus
     printed_board.each_with_index do |board_column, index_column|
       board_column.each_with_index do |row, index_row|
         if index_row == board_size
-          if row != "x"
+          if row.is_a? Integer
             printf "%-7s", "[#{index_row},#{row}]"
             printf "\n"
           else
@@ -338,7 +336,7 @@ class Blokus
             printf "\n"
           end
         else
-          if row != "x"
+          if row.is_a? Integer
             printf "%-7s", "[#{index_row},#{row}]"
           else
             printf "%-7s", "[#{row}]"
@@ -351,10 +349,10 @@ class Blokus
   def print_blok_base(blok_list)
     blok_list.each_with_index do |printed_blok_base, index|
       puts "#{index + 1}. "
-      printed_blok_base.each_with_index do |board_column, index_column|
+      printed_blok_base.transpose.reverse.each_with_index do |board_column, index_column|
         board_column.each_with_index do |row, index_row|
           if index_row == 5
-            if row == "x"
+            if !row.is_a? Integer
               printf "%-3s", row
               printf "\n"
             else
@@ -362,7 +360,7 @@ class Blokus
               printf "\n"
             end
           else
-            if row == "x"
+            if !row.is_a? Integer
               printf "%-3s", row
             else
               printf "%-3s", nil
