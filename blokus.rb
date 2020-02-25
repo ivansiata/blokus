@@ -141,20 +141,47 @@ class Blokus
 
   def run_blokus
     initialize_board(19)
+    binding.pry
+
     print_board(19)
     finished = false
     @turn = 0
     @first_turn = true
-    player1_bloks = BLOCKS.dup
-    player2_bloks = BLOCKS.dup
+    player1 = {
+      name: "Player 1",
+      symbol: "x",
+      bloks: BLOCKS.dup  
+    }
+    
+    player2 = {
+      name: "Player 2",
+      symbol: "y",
+      bloks: BLOCKS.dup  
+    }
+
+    player3 = {
+      name: "Player 3",
+      symbol: "y",
+      bloks: BLOCKS.dup  
+    }
+
+    player4 = {
+      name: "Player 4",
+      symbol: "y",
+      bloks: BLOCKS.dup  
+    }
     while !finished
       if @turn == 0
-        @player_bloks = player1_bloks
-        @symbol = "x"
+        @player = player1
       elsif @turn == 1
-        @player_bloks = player2_bloks
-        @symbol = "y"
+        @player = player2
+      elsif @turn == 2
+        @player = player3
+      elsif @turn == 3
+        @player = player4  
       end  
+      @player_bloks = @player[:bloks]
+      puts "#{@player[:name]}'s turn"
       print_remaining_bloks
       puts "Select board coordinate"
       board_coordinate = gets.chomp.split(",").map(&:to_i)
@@ -177,7 +204,7 @@ class Blokus
       printed_blok_base = @player_bloks[choosen_blok_type.to_sym].values.each do |blok|
         blok_1 = initialize_blok_base
         blok.each_with_index do |s|
-          blok_1[s[0]][s[1]] = @symbol
+          blok_1[s[0]][s[1]] = @player[:symbol]
         end
         printed_bloks << blok_1
       end
@@ -193,9 +220,6 @@ class Blokus
         puts "Blok don't exists \n\n"
         next
       end
-
-      @blok_1 = @blok_base
-      blok_place = []
 
       puts "Select blok coordinate"
       blok_coordinate = gets.chomp.split(",").map(&:to_i)
@@ -223,8 +247,6 @@ class Blokus
     check_another_blok = true
     if @first_turn && @turn == 0
       valid = false if !blok_place.include?([0,0])
-    elsif @first_turn && @turn == 1
-      valid = false if !blok_place.include?([0,19])
     end
 
     blok.each do |b|
@@ -233,17 +255,17 @@ class Blokus
       #check if outside board or
       if @board[blok_place[0]] == nil || blok_place[0] < 0 || blok_place[1] < 0
         valid = false
-      elsif @board[blok_place[0]][blok_place[1]] == nil || @board[blok_place[0]][blok_place[1]] == @symbol
+      elsif @board[blok_place[0]][blok_place[1]] == nil || @board[blok_place[0]][blok_place[1]] == @player[:symbol]
         valid = false
       end
 
       #check if turn > 0
       if !@first_turn
         if check_another_blok
-          if @board[blok_place[0] + 1][blok_place[1] + 1] != @symbol &&
-            @board[blok_place[0] + 1][blok_place[1] - 1] != @symbol &&
-            @board[blok_place[0] - 1][blok_place[1] + 1] != @symbol &&
-            @board[blok_place[0] - 1][blok_place[1] - 1] != @symbol
+          if @board[blok_place[0] + 1][blok_place[1] + 1] != @player[:symbol] &&
+            @board[blok_place[0] + 1][blok_place[1] - 1] != @player[:symbol] &&
+            @board[blok_place[0] - 1][blok_place[1] + 1] != @player[:symbol] &&
+            @board[blok_place[0] - 1][blok_place[1] - 1] != @player[:symbol]
             valid = false
           else
             valid = true
@@ -252,10 +274,10 @@ class Blokus
         end
 
         if valid
-          if @board[blok_place[0] - 1][blok_place[1]] == @symbol ||
-              @board[blok_place[0]][blok_place[1] + 1] == @symbol ||
-              @board[blok_place[0] + 1][blok_place[1]] == @symbol ||
-              @board[blok_place[0]][blok_place[1] - 1] == @symbol
+          if @board[blok_place[0] - 1][blok_place[1]] == @player[:symbol] ||
+              @board[blok_place[0]][blok_place[1] + 1] == @player[:symbol] ||
+              @board[blok_place[0] + 1][blok_place[1]] == @player[:symbol] ||
+              @board[blok_place[0]][blok_place[1] - 1] == @player[:symbol]
 
               valid = false
           end
@@ -273,15 +295,16 @@ class Blokus
     if validate_place(board_coordinate, blok, add)
       blok.each_with_index do |b|
         blok_place = [(b[0] + add[0]), (b[1] + add[1])]
-        @board[blok_place[0]][blok_place[1]] = @symbol
+        @board[blok_place[0]][blok_place[1]] = @player[:symbol]
       end
       @player_bloks.delete(choosen_blok_type.to_sym)
-      if @turn == 1
+      if @turn == 4
         @turn = 0
         @first_turn = false
       else
         @turn += 1
       end
+      @board = @board.transpose.map{|x| x.reverse}
     else
       puts "Not Valid"
     end
@@ -324,6 +347,7 @@ class Blokus
   end
 
   def print_board(board_size)
+    binding.pry
     printed_board = @board.transpose.reverse
     printed_board.each_with_index do |board_column, index_column|
       board_column.each_with_index do |row, index_row|
