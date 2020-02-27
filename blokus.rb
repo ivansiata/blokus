@@ -136,9 +136,8 @@ class Blokus
   }.freeze
 
   def run_blokus
-    initialize_board(19)
-    @base_printed_board = @board.transpose.reverse 
-    print_board(19)
+    initialize_board(5)
+    print_board(5)
     finished = false
     @turn = 0
     @first_turn = true
@@ -184,33 +183,25 @@ class Blokus
       @player_bloks = @player[:bloks]
 
       if @player[:state] == "surrender"
-        @board = @board.transpose.map{|x| x.reverse}
-        if @turn == 3
-          @turn = 0
-          @first_turn = false
-        else 
-          @turn += 1
-        end
+        rotate_board!
+        add_turn!
+        system('clear')
       else
         puts "#{@player[:name]}'s turn"
         puts "1. Make Move"
         puts "2. Surrender"
         puts "Choose Action:"
         action = gets.chomp.to_i
-        if action < 1 || action > 2 
+        if action < 1 || action > 2
           puts "Input Invalid \n\n"
           next
         end
 
         if action == 2
           @player[:state] = "surrender"
-          @board = @board.transpose.map{|x| x.reverse}
-          if @turn == 3
-            @turn = 0
-            @first_turn = false
-          else 
-            @turn += 1
-          end
+          rotate_board!
+          add_turn!
+          system('clear')
         else
           print_remaining_bloks
           puts "Select board coordinate"
@@ -226,20 +217,11 @@ class Blokus
           choosen_blok_type = gets.chomp
 
           if !@player_bloks.keys.include?(choosen_blok_type.to_sym)
-            puts "blok not available"
+            puts "Blok not available"
             next
           end
 
-          printed_bloks = []
-          printed_blok_base = @player_bloks[choosen_blok_type.to_sym].values.each do |blok|
-            blok_1 = initialize_blok_base
-            blok.each_with_index do |s|
-              blok_1[s[0]][s[1]] = @player[:symbol]
-            end
-            printed_bloks << blok_1
-          end
-
-          print_blok_base(printed_bloks)
+          print_blok_list!(choosen_blok_type)
 
           puts "Select blok"
           choosen_blok_direction = gets.chomp
@@ -261,6 +243,7 @@ class Blokus
         end
       end
 
+      #check if finished
       if @player_bloks.empty?
         finished = true
         puts "#{@player[:name]} Win!"
@@ -274,7 +257,8 @@ class Blokus
         winning_player = players[winning_player_index]
         puts "#{winning_player[:name]} Win!"
       end
-      print_board(19) if !finished && @player[:state]
+
+      print_board(5) if !finished
     end
   end
 
@@ -284,26 +268,26 @@ class Blokus
 
   def validate_place(board_coordinate, blok, add)
     valid = true
-    blok_place = []
+    blok_places = []
     blok.each do |b|
-      blok_place << [(b[0] + add[0]), (b[1] + add[1])]
+      blok_places << [(b[0] + add[0]), (b[1] + add[1])]
     end 
-    check_another_blok = true
+    #check if start from 0,0
     if @first_turn
-      valid = false if !blok_place.include?([0,0])
+      valid = false if !blok_places.include?([0,0])
     end
-    blok.each do |b|
-      blok_place = [(b[0] + add[0]), (b[1] + add[1])]
-
-      #check if outside board or
+    check_another_blok = true
+    blok_places.each do |blok_place|
+      #check if outside board or not available space
       if @board[blok_place[0]] == nil || blok_place[0] < 0 || blok_place[1] < 0
         valid = false
-      elsif @board[blok_place[0]][blok_place[1]] == nil || @board[blok_place[0]][blok_place[1]] == @player[:symbol]
+      elsif @board[blok_place[0]][blok_place[1]] == nil || !@board[blok_place[0]][blok_place[1]].is_a?(Integer)
         valid = false
       end
 
       #check if turn > 0
       if !@first_turn
+        #check if blok have atleast 1 corner touch
         if check_another_blok
           if @board[blok_place[0] + 1][blok_place[1] + 1] != @player[:symbol] &&
             @board[blok_place[0] + 1][blok_place[1] - 1] != @player[:symbol] &&
@@ -316,6 +300,7 @@ class Blokus
           end
         end
 
+        #check if blok dont have side touch
         if valid
           if @board[blok_place[0] - 1][blok_place[1]] == @player[:symbol] ||
               @board[blok_place[0]][blok_place[1] + 1] == @player[:symbol] ||
@@ -341,14 +326,11 @@ class Blokus
         @board[blok_place[0]][blok_place[1]] = @player[:symbol]
       end
       @player_bloks.delete(choosen_blok_type.to_sym)
-      if @turn == 3
-        @turn = 0
-        @first_turn = false
-      else
-        @turn += 1
-      end
-      @board = @board.transpose.map{|x| x.reverse}
+      add_turn!
+      rotate_board!
+      system('clear')
     else
+      system('clear')
       puts "Not Valid"
     end
   end
@@ -391,11 +373,12 @@ class Blokus
 
   def print_board(board_size)
     printed_board = @board.transpose.reverse
+    y_index = board_size
     printed_board.each_with_index do |board_column, index_column|
       board_column.each_with_index do |row, index_row|
         if index_row == board_size
           if row.is_a? Integer
-            printf "%-7s", "[#{index_row},#{row}]"
+            printf "%-7s", "[#{index_row},#{y_index}]"
             printf "\n"
           else
             printf "%-7s", "[#{row}]"
@@ -403,12 +386,13 @@ class Blokus
           end
         else
           if row.is_a? Integer
-            printf "%-7s", "[#{index_row},#{row}]"
+            printf "%-7s", "[#{index_row},#{y_index}]"
           else
             printf "%-7s", "[#{row}]"
           end
         end
       end
+      y_index -= 1
     end
     puts "\n"
   end
@@ -436,6 +420,32 @@ class Blokus
         end
       end
     end
+  end
+
+  def add_turn!
+    if @turn == 3
+      @turn = 0
+      @first_turn = false
+    else 
+      @turn += 1
+    end
+  end
+
+  def rotate_board!
+    @board = @board.transpose.map{|x| x.reverse}
+  end
+
+  def print_blok_list!(choosen_blok_type)
+    printed_bloks = []
+    printed_blok_base = @player_bloks[choosen_blok_type.to_sym].values.each do |blok|
+      printed_blok = initialize_blok_base
+      blok.each_with_index do |s|
+        printed_blok[s[0]][s[1]] = @player[:symbol]
+      end
+      printed_bloks << printed_blok
+    end
+
+    print_blok_base(printed_bloks)
   end
 
 end
